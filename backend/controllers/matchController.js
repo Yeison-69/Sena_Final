@@ -1,44 +1,68 @@
-import db from "../config/db.js";
+import { getDB } from "../config/db.js";
+import { createNotification } from "./notifController.js";
 
-// Crear like
-export const crearLike = async (req, res) => {
+export const sendLike = async (req, res) => {
   try {
-    const { usuario_id, like_usuario_id } = req.body;
+    const db = await getDB();
+    const userId = req.user.id;
+    const { likedUserId } = req.body;
 
+    // registrar like
     await db.query(
-      "INSERT INTO likes (usuario_id, like_usuario_id) VALUES (?, ?)",
-      [usuario_id, like_usuario_id]
+      "INSERT IGNORE INTO likes (user_id, liked_user_id) VALUES (?, ?)",
+      [userId, likedUserId]
     );
 
-    res.json({ message: "Like registrado" });
-  } catch (error) {
-    console.error("Error crearLike:", error);
-    res.status(500).json({ message: "Error al dar like" });
+    // verificar si el otro también dio like
+    const [rows] = await db.query(
+      "SELECT * FROM likes WHERE user_id = ? AND liked_user_id = ?",
+      [likedUserId, userId]
+    );
+
+    if (rows.length > 0) {
+      // registrar match
+      await db.query(
+        "INSERT IGNORE INTO matches (user1, user2) VALUES (?, ?)",
+        [userId, likedUserId]
+      );
+
+      // notificar a ambos
+      await createNotification(
+        likedUserId,
+        "match",
+        "🔥 ¡Tienes un nuevo match!"
+      );
+
+      await createNotification(
+        userId,
+        "match",
+        "🔥 ¡Tienes un nuevo match!"
+      );
+
+      return res.json({ match: true });
+    }
+
+    res.json({ match: false });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: "Error enviando like" });
   }
 };
 
-// Obtener matches
-export const obtenerMatches = async (req, res) => {
+export const getMatches = async (req, res) => {
   try {
+    const db = await getDB();
+
     const [rows] = await db.query(
-      `SELECT u.id, u.nombre, u.foto 
-       FROM likes l1
-       INNER JOIN likes l2 
-         ON l1.like_usuario_id = l2.usuario_id 
-        AND l1.usuario_id = l2.like_usuario_id
-       INNER JOIN users u ON u.id = l1.like_usuario_id
-       WHERE l1.usuario_id = ?`,
-      [req.params.id]
+      `SELECT u.id, u.nombre, u.email, u.foto, u.descripcion
+       FROM matches m
+       JOIN users u ON (u.id = m.user1 OR u.id = m.user2)
+       WHERE (m.user1 = ? OR m.user2 = ?) AND u.id != ?`,
+      [req.user.id, req.user.id, req.user.id]
     );
 
     res.json(rows);
-  } catch (error) {
-    console.error("Error obtenerMatches:", error);
-    res.status(500).json({ message: "Error al obtener matches" });
+  } catch (e) {
+    res.status(500).json({ message: "Error cargando matches" });
   }
-};
-
-export default {
-  crearLike,
-  obtenerMatches
 };

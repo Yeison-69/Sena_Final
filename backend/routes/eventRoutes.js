@@ -1,16 +1,19 @@
 import express from "express";
+import { protect } from "../middleware/auth.js";
 import {
-  crearEvento,
-  obtenerEventos,
-  actualizarEvento,
-  eliminarEvento,
+  createEvent,
+  getEvents,
+  updateEvent,
+  deleteEvent,
+  joinEvent
 } from "../controllers/eventController.js";
 
 const router = express.Router();
 
-router.post("/", crearEvento);
-router.get("/", obtenerEventos);
-router.put("/:id", actualizarEvento);
-router.delete("/:id", eliminarEvento);
+router.get("/", getEvents);
+router.post("/create", protect, createEvent);
+router.put("/update", protect, updateEvent);
+router.delete("/:id", protect, deleteEvent);
+router.post("/:id/join", protect, joinEvent);
 
 export default router;
