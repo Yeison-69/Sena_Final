@@ -1,20 +1,25 @@
+// frontend/src/pages/Login.jsx
 import React, { useState } from "react";
 import axios from "axios";
 import { API_URL } from "../config/api";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 export default function Login() {
   const nav = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     try {
+      setLoading(true);
       const res = await axios.post(`${API_URL}/auth/login`, form);
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
       nav("/profile");
     } catch (err) {
-      alert(err.response?.data?.error || "Error de login");
+      alert(err.response?.data?.message || "Error de login");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -23,9 +28,9 @@ export default function Login() {
       <h2 style={{ textAlign: "center" }}>Iniciar sesión</h2>
       <input placeholder="Email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})} className="p-2 w-full mb-2" />
       <input placeholder="Contraseña" type="password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})} className="p-2 w-full mb-2" />
-      <button onClick={handleLogin} className="w-full p-2 bg-purple-600 text-white rounded">Entrar</button>
+      <button onClick={handleLogin} disabled={loading} className="w-full p-2 bg-purple-600 text-white rounded">{loading ? "Ingresando..." : "Entrar"}</button>
       <div style={{ marginTop: 10, textAlign: "center" }}>
-        <Link to="/register">Crear cuenta</Link>
+        <a href="/register">Crear cuenta</a>
       </div>
     </div>
   );

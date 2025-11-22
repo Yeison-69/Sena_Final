@@ -1,42 +1,68 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { API_URL } from "../config/api";
-import { Link } from "react-router-dom";
+import api from "../api/axios";
 
 export default function Profile() {
-  const token = localStorage.getItem("token");
   const [user, setUser] = useState(null);
+  const [error, setError] = useState("");
+
+  const loadProfile = async () => {
+    try {
+      const res = await api.get("/users/me");
+      setUser(res.data);
+    } catch (err) {
+      console.error("Error cargando perfil:", err);
+      setError("No se pudo cargar el perfil");
+    }
+  };
 
   useEffect(() => {
-    if (!token) return;
-    axios.get(`${API_URL}/user/me`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(res => setUser(res.data))
-      .catch(()=> {});
+    loadProfile();
   }, []);
 
-  if (!token) return <div style={{ padding: 20 }}>Debes <Link to="/login">iniciar sesión</Link></div>;
-  if (!user) return <div style={{ padding: 20 }}>Cargando perfil...</div>;
+  if (error) return <h2 style={{ color: "red" }}>{error}</h2>;
+  if (!user) return <h2>Cargando perfil...</h2>;
 
   return (
-    <div style={{ padding: 20, maxWidth: 720, margin: "30px auto", color: "#111" }}>
-      <div style={{ textAlign: "center", background: "#111", color: "white", padding: 20, borderRadius: 8 }}>
-        <h2>Tu perfil</h2>
-      </div>
+    <div style={{ textAlign: "center", marginTop: "30px" }}>
+      <div style={{
+        width: "350px",
+        margin: "0 auto",
+        padding: "25px",
+        borderRadius: "10px",
+        boxShadow: "0 0 10px rgba(0,0,0,0.1)"
+      }}>
 
-      <div style={{ display: "flex", gap: 20, marginTop: 20, alignItems: "center" }}>
-        <img src={user.foto || "/images/user-default.png"} alt="foto" style={{ width: 160, height: 160, objectFit: "cover", borderRadius: 12 }} />
-        <div>
-          <h3 style={{ margin: 0 }}>{user.nombre}</h3>
-          <p style={{ color: "#555" }}>{user.descripcion || "Sin descripción"}</p>
-          <div style={{ marginTop: 10 }}>
-            <Link to="/profile/edit"><button className="px-4 py-2 mr-2 bg-yellow-400 rounded">Editar perfil</button></Link>
-            <button className="px-4 py-2 bg-red-500 text-white rounded" onClick={()=>{
-              localStorage.removeItem("token");
-              localStorage.removeItem("user");
-              window.location.href = "/login";
-            }}>Cerrar sesión</button>
-          </div>
-        </div>
+        <img 
+          src={user.foto || "https://i.imgur.com/EsK14ZB.png"} 
+          alt="Foto perfil" 
+          style={{
+            width: "110px",
+            height: "110px",
+            borderRadius: "50%",
+            objectFit: "cover",
+            marginBottom: "15px"
+          }}
+        />
+
+        <h2>{user.nombre}</h2>
+        <p style={{ opacity: 0.7 }}>{user.email}</p>
+        <p style={{ marginTop: 10 }}>{user.descripcion || "Sin descripción"}</p>
+
+        <button
+          onClick={() => (window.location.href = "/edit-profile")}
+          style={{
+            marginTop: "20px",
+            padding: "12px",
+            background: "#6200EE",
+            color: "white",
+            border: "none",
+            borderRadius: "8px",
+            cursor: "pointer",
+            width: "100%"
+          }}
+        >
+          Editar perfil
+        </button>
       </div>
     </div>
   );

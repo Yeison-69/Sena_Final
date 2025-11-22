@@ -1,40 +1,39 @@
-import React from "react";
-import { NavLink } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { API_URL } from "../config/api";
 
-const Navbar = () => {
-  const linkClass = ({ isActive }) =>
-    isActive
-      ? "text-white bg-blue-500 px-3 py-2 rounded"
-      : "text-gray-700 hover:text-white hover:bg-blue-500 px-3 py-2 rounded transition";
+export default function Navbar() {
+  const token = localStorage.getItem("token");
+  const [numNoti, setNumNoti] = useState(0);
+
+  const load = async () => {
+    if (!token) return;
+    const res = await axios.get(`${API_URL}/notificaciones`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    const sinLeer = res.data.filter((n) => n.leida === 0).length;
+    setNumNoti(sinLeer);
+  };
+
+  useEffect(() => {
+    load();
+    const interval = setInterval(load, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
-    <nav className="bg-gray-100 shadow-md px-4 py-3 flex justify-between items-center">
-      <h1 className="text-2xl font-bold text-blue-500">Proyecto Final</h1>
-      <div className="space-x-2 flex">
-        <NavLink to="/" className={linkClass}>
-          Dashboard
-        </NavLink>
-        <NavLink to="/eventos" className={linkClass}>
-          Eventos
-        </NavLink>
-        <NavLink to="/parches" className={linkClass}>
-          Parches
-        </NavLink>
-        <NavLink to="/amigos" className={linkClass}>
-          Amigos
-        </NavLink>
-        <NavLink to="/mapa" className={linkClass}>
-          Mapa
-        </NavLink>
-        <NavLink to="/profile" className={linkClass}>
-          Perfil
-        </NavLink>
-        <NavLink to="/login" className={linkClass}>
-          Login
-        </NavLink>
-      </div>
+    <nav className="p-4 bg-purple-600 text-white flex justify-between">
+      <h1 className="font-bold">ParcheGO</h1>
+
+      <a href="/notificaciones" className="relative text-xl">
+        🔔
+        {numNoti > 0 && (
+          <span className="absolute -top-2 -right-2 bg-red-600 text-white text-xs px-1 rounded-full">
+            {numNoti}
+          </span>
+        )}
+      </a>
     </nav>
   );
-};
-
-export default Navbar;
+}

@@ -5,52 +5,118 @@ import { API_URL } from "../config/api";
 export default function Chat() {
   const token = localStorage.getItem("token");
   const me = JSON.parse(localStorage.getItem("user") || "null");
-  const [convs, setConvs] = useState([]);
-  const [sel, setSel] = useState(null);
-  const [msgs, setMsgs] = useState([]);
+
+  const [chats, setChats] = useState([]);
+  const [active, setActive] = useState(null);
+  const [messages, setMessages] = useState([]);
   const [txt, setTxt] = useState("");
 
-  useEffect(()=> {
-    if (!token) return;
-    axios.get(`${API_URL}/chats`, { headers: { Authorization: `Bearer ${token}` } }).then(r=>setConvs(r.data)).catch(()=>{});
-    const iv = setInterval(()=> {
-      if (sel) {
-        axios.get(`${API_URL}/chats/${sel.id}/messages`, { headers: { Authorization: `Bearer ${token}` } }).then(r=>setMsgs(r.data)).catch(()=>{});
-      }
-    }, 2000);
-    return ()=>clearInterval(iv);
-  }, [sel]);
-
-  const send = async ()=> {
-    if (!txt || !sel) return;
-    await axios.post(`${API_URL}/chats/${sel.id}/message`, { contenido: txt }, { headers: { Authorization: `Bearer ${token}` }});
-    setTxt("");
+  // cargar chats
+  const loadChats = async () => {
+    const res = await axios.get(`${API_URL}/chats`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    setChats(res.data);
   };
 
+  // cargar mensajes del chat activo
+  const loadMessages = async () => {
+    if (!active) return;
+    const res = await axios.get(`${API_URL}/chats/${active.id}/messages`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    setMessages(res.data);
+  };
+
+  const send = async () => {
+    if (!txt) return;
+    await axios.post(
+      `${API_URL}/chats/${active.id}/message`,
+      { contenido: txt },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    setTxt("");
+    loadMessages();
+  };
+
+  useEffect(() => {
+    loadChats();
+  }, []);
+
+  useEffect(() => {
+    loadMessages();
+    const interval = setInterval(loadMessages, 2000);
+    return () => clearInterval(interval);
+  }, [active]);
+
   return (
-    <div style={{ padding: 20, display: "flex", gap: 12 }}>
-      <div style={{ width: 250, background: "white", padding: 12, borderRadius: 8 }}>
-        <h4>Conversaciones</h4>
-        {convs.map(c => <div key={c.id} onClick={()=>setSel(c)} style={{ padding: 8, cursor: "pointer", background: sel?.id===c.id ? "#eee": "transparent" }}>{c.nombre}</div>)}
+    <div className="flex h-screen">
+
+      {/* LISTA DE CHATS */}
+      <div className="w-1/3 bg-white shadow-md p-4 overflow-auto">
+        <h2 className="text-xl font-bold mb-3">Chats</h2>
+        {chats.map((c) => (
+          <div
+            key={c.id}
+            onClick={() => setActive(c)}
+            className={`p-3 rounded mb-2 cursor-pointer ${
+              active?.id === c.id ? "bg-purple-200" : "bg-gray-100"
+            }`}
+          >
+            {c.nombre || "Chat privado"}
+          </div>
+        ))}
       </div>
 
-      <div style={{ flex: 1, background: "white", padding: 12, borderRadius: 8, display: "flex", flexDirection: "column" }}>
-        {!sel ? <div>Selecciona una conversación</div> :
+      {/* ZONA DE MENSAJES */}
+      <div className="flex-1 bg-gray-50 flex flex-col">
+        {!active ? (
+          <div className="flex items-center justify-center h-full text-gray-500">
+            Selecciona un chat
+          </div>
+        ) : (
           <>
-            <div style={{ flex: 1, overflow: "auto", marginBottom: 8 }}>
-              {msgs.map(m => (
-                <div key={m.id} style={{ textAlign: m.remitente_id === me.id ? "right" : "left", marginBottom: 6 }}>
-                  <div style={{ display: "inline-block", padding: 8, borderRadius: 8, background: m.remitente_id === me.id ? "#4f46e5" : "#e5e7eb", color: m.remitente_id === me.id ? "white" : "black" }}>{m.contenido}</div>
+            <div className="flex-1 overflow-auto p-4">
+              {messages.map((m) => (
+                <div
+                  key={m.id}
+                  className={`mb-3 flex ${
+                    m.remitente_id === me.id
+                      ? "justify-end"
+                      : "justify-start"
+                  }`}
+                >
+                  <div
+                    className={`px-3 py-2 rounded-lg ${
+                      m.remitente_id === me.id
+                        ? "bg-purple-600 text-white"
+                        : "bg-white shadow"
+                    }`}
+                  >
+                    {m.contenido}
+                  </div>
                 </div>
               ))}
             </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <input value={txt} onChange={e=>setTxt(e.target.value)} className="p-2 flex-1" />
-              <button onClick={send} className="px-4 py-2 bg-purple-600 text-white rounded">Enviar</button>
+
+            <div className="p-4 bg-white shadow flex gap-2">
+              <input
+                className="flex-1 border rounded p-2"
+                value={txt}
+                onChange={(e) => setTxt(e.target.value)}
+                placeholder="Escribe un mensaje..."
+              />
+              <button
+                onClick={send}
+                className="bg-purple-600 text-white px-4 rounded"
+              >
+                Enviar
+              </button>
             </div>
           </>
-        }
+        )}
       </div>
+
     </div>
   );
 }

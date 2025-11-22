@@ -1,4 +1,12 @@
-let _token = null;
-export function setToken(t) { _token = t; }
-export function getToken() { return _token; }
-export function clearToken() { _token = null; }
+// frontend/src/auth/authStorage.js
+export function setToken(token) {
+  localStorage.setItem("token", token);
+}
+
+export function getToken() {
+  return localStorage.getItem("token");
+}
+
+export function clearToken() {
+  localStorage.removeItem("token");
+}

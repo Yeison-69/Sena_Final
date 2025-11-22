@@ -4,23 +4,55 @@ import { API_URL } from "../config/api";
 
 export default function Notificaciones() {
   const token = localStorage.getItem("token");
-  const [items, setItems] = useState([]);
+  const [noti, setNoti] = useState([]);
 
-  useEffect(()=> {
-    if (!token) return;
-    axios.get(`${API_URL}/notifications`, { headers: { Authorization: `Bearer ${token}` }})
-      .then(r=>setItems(r.data))
-      .catch(()=>{});
+  const load = async () => {
+    const res = await axios.get(`${API_URL}/notificaciones`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    setNoti(res.data);
+  };
+
+  const marcarLeida = async (id) => {
+    await axios.put(
+      `${API_URL}/notificaciones/${id}/read`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    load();
+  };
+
+  useEffect(() => {
+    load();
   }, []);
 
   return (
-    <div style={{ padding: 20 }}>
-      <h3>Notificaciones</h3>
-      {items.length===0 && <p>No hay notificaciones</p>}
-      {items.map(n => (
-        <div key={n.id} style={{ background: "white", padding: 8, borderRadius: 8, marginBottom: 8 }}>
-          <div>{n.mensaje}</div>
-          <div style={{ fontSize: 12, color: "#666" }}>{new Date(n.creado_en).toLocaleString()}</div>
+    <div className="p-4">
+      <h2 className="text-xl font-bold mb-4">Notificaciones</h2>
+
+      {noti.map((n) => (
+        <div
+          key={n.id}
+          className={`p-3 rounded shadow mb-2 ${
+            n.leida ? "bg-gray-200" : "bg-white"
+          }`}
+        >
+          <div className="flex justify-between">
+            <div>
+              <strong>{n.tipo.toUpperCase()}</strong>
+              <p>{n.mensaje}</p>
+              <small className="text-gray-500">{n.created_at}</small>
+            </div>
+
+            {!n.leida && (
+              <button
+                onClick={() => marcarLeida(n.id)}
+                className="bg-purple-600 text-white px-3 py-1 rounded"
+              >
+                Marcar
+              </button>
+            )}
+          </div>
         </div>
       ))}
     </div>

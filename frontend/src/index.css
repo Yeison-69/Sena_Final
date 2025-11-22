@@ -1,3 +1,59 @@
-/* frontend/src/index.css */
-html,body,#root { height: 100%; margin: 0; font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background: linear-gradient(180deg,#7c3aed,#ec4899); }
-a { text-decoration: none; color: inherit; }
+body {
+  margin: 0;
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(180deg, #7b2ff7, #ff4ecd);
+  min-height: 100vh;
+  color: #fff;
+}
+
+.container {
+  max-width: 700px;
+  margin: auto;
+  padding: 20px;
+}
+
+.card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  color: #222;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+}
+
+input, textarea {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  margin-bottom: 10px;
+}
+
+button {
+  background: #7b2ff7;
+  padding: 12px;
+  border-radius: 10px;
+  color: white;
+  width: 100%;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  margin-top: 5px;
+}
+
+button:hover {
+  background: #6520cc;
+}
+
+nav.bottom {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: white;
+  padding: 12px;
+  display: flex;
+  justify-content: space-around;
+  border-radius: 16px 16px 0 0;
+}
+
+nav.bottom a {
+  font-size: 24px;
+}
