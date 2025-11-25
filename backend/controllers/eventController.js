@@ -1,73 +1,153 @@
-import { getDB } from "../config/db.js";
+import { db } from "../config/db.js";
+import { createNotification } from "./notifController.js";
 
-export const getEvents = async (req, res) => {
-  try {
-    const db = await getDB();
-    const [rows] = await db.query(`
-      SELECT e.*, u.nombre AS creador_nombre
-      FROM events e
-      JOIN users u ON u.id = e.creator_id
-      ORDER BY e.id DESC
-    `);
-    res.json(rows);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ message: "Error cargando eventos" });
-  }
-};
 
+// =============================
+// 📌 CREAR EVENTO
+// =============================
 export const createEvent = async (req, res) => {
   try {
     const { titulo, descripcion, fecha, imagen, map_url } = req.body;
+    const creador_id = req.user.id;
 
-    const db = await getDB();
-
-    await db.query(
-      "INSERT INTO events (titulo, descripcion, fecha, imagen, map_url, creator_id) VALUES (?, ?, ?, ?, ?, ?)",
-      [titulo, descripcion, fecha, imagen, map_url, req.user.id]
+    const [result] = await db.query(
+      `INSERT INTO eventos (titulo, descripcion, fecha, imagen, map_url, creador_id)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [titulo, descripcion, fecha, imagen, map_url, creador_id]
     );
 
-    res.json({ message: "Evento creado" });
+    return res.json({ id: result.insertId, message: "Evento creado" });
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ message: "Error creando evento" });
+    console.error("Error createEvent:", e);
+    res.status(500).json({ error: "Error creando evento" });
   }
 };
 
+
+// =============================
+// 📌 LISTAR EVENTOS
+// =============================
+export const listEvents = async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT 
+        e.id,
+        e.titulo,
+        e.descripcion,
+        e.fecha,
+        e.imagen,
+        e.map_url,
+        e.creador_id,
+        u.nombre AS creador_nombre
+      FROM eventos e
+      JOIN users u ON u.id = e.creador_id
+      ORDER BY e.fecha ASC
+    `);
+
+    res.json(rows);
+  } catch (e) {
+    console.error("Error listEvents:", e);
+    res.status(500).json({ error: "Error obteniendo eventos" });
+  }
+};
+
+
+// =============================
+// 📌 EDITAR EVENTO
+// =============================
 export const updateEvent = async (req, res) => {
   try {
     const { id, titulo, descripcion, fecha, imagen, map_url } = req.body;
 
-    const db = await getDB();
-
     await db.query(
-      `UPDATE events SET 
-        titulo=?, descripcion=?, fecha=?, imagen=?, map_url=?
-       WHERE id=? AND creator_id=?`,
-      [titulo, descripcion, fecha, imagen, map_url, id, req.user.id]
+      `UPDATE eventos 
+       SET titulo = ?, descripcion = ?, fecha = ?, imagen = ?, map_url = ?
+       WHERE id = ?`,
+      [titulo, descripcion, fecha, imagen, map_url, id]
     );
 
     res.json({ message: "Evento actualizado" });
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ message: "Error actualizando evento" });
+    console.error("Error updateEvent:", e);
+    res.status(500).json({ error: "Error actualizando evento" });
   }
 };
 
+
+// =============================
+// 📌 ELIMINAR EVENTO
+// =============================
 export const deleteEvent = async (req, res) => {
   try {
-    const db = await getDB();
-    await db.query("DELETE FROM events WHERE id=? AND creator_id=?", [
-      req.params.id,
-      req.user.id,
-    ]);
+    const { id } = req.params;
+
+    await db.query(`DELETE FROM eventos WHERE id = ?`, [id]);
+
     res.json({ message: "Evento eliminado" });
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ message: "Error eliminando evento" });
+    console.error("Error deleteEvent:", e);
+    res.status(500).json({ error: "Error eliminando evento" });
   }
 };
 
+
+// =============================
+// 📌 UNIRSE A UN EVENTO
+// =============================
 export const joinEvent = async (req, res) => {
-  res.json({ message: "Te uniste al evento (pendiente asistentes)" });
+  console.log("➡️ joinEvent ejecutado");
+  console.log("  req.params.id =", req.params.id);
+  console.log("  req.user =", req.user);
+
+  try {
+    const eventoId = req.params.id;
+    const userId = req.user?.id;
+
+    if (!eventoId || !userId) {
+      console.log("❌ Datos incompletos:", { eventoId, userId });
+      return res.status(400).json({ error: "Datos incompletos" });
+    }
+
+    console.log("✔ Datos correctos:", { eventoId, userId });
+
+    // Verificar si ya está unido
+    const [exists] = await db.query(
+      "SELECT id FROM participantes_evento WHERE evento_id = ? AND user_id = ?",
+      [eventoId, userId]
+    );
+
+    if (exists.length > 0) {
+      console.log("⚠️ Ya está unido al evento");
+      return res.json({ message: "Ya estás unido" });
+    }
+
+    // Insertar participación
+    await db.query(
+      "INSERT INTO participantes_evento (evento_id, user_id) VALUES (?, ?)",
+      [eventoId, userId]
+    );
+
+    console.log("✔ Insertado en participantes_evento");
+
+    // Obtener creador del evento
+    const [creatorRow] = await db.query(
+      "SELECT creador_id, titulo FROM eventos WHERE id = ?",
+      [eventoId]
+    );
+
+    const creador = creatorRow[0];
+
+    // Enviar notificación
+    await createNotification(
+      creador.creador_id,
+      `Un usuario se unió a tu evento "${creador.titulo}"`
+    );
+
+    console.log("✔ Notificación enviada");
+
+    res.json({ message: "Unido al evento" });
+  } catch (e) {
+    console.error("Error joinEvent:", e);
+    res.status(500).json({ error: "Error al unirse al evento" });
+  }
 };

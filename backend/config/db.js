@@ -1,16 +1,18 @@
 import mysql from "mysql2/promise";
 import dotenv from "dotenv";
+
 dotenv.config();
 
-let pool;
+let pool = null;
 
-export async function getDB() {
+async function connectDB() {
   if (!pool) {
-    pool = mysql.createPool({
-      host: process.env.DB_HOST,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASS,
-      database: process.env.DB_NAME,
+    pool = await mysql.createPool({
+      host: process.env.DB_HOST || "localhost",
+      user: process.env.DB_USER || "root",
+      password: process.env.DB_PASS || "",
+      database: process.env.DB_NAME || "parchego",
+      waitForConnections: true,
       connectionLimit: 10
     });
     console.log("📌 MySQL conectado");
@@ -18,4 +20,8 @@ export async function getDB() {
   return pool;
 }
 
-export default getDB;
+export async function getDB() {
+  return await connectDB();
+}
+
+export default connectDB;

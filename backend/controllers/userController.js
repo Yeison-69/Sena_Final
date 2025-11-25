@@ -36,3 +36,23 @@ export const updateProfile = async (req, res) => {
     res.status(500).json({ message: "Error del servidor" });
   }
 };
+
+export const discoverUsers = async (req, res) => {
+  try {
+    const db = await getDB();
+
+    // usuarios excepto el que está logueado
+    const [users] = await db.query(
+      `SELECT id, nombre, descripcion, foto 
+       FROM users 
+       WHERE id != ?`,
+      [req.user.id]
+    );
+
+    res.json(users);
+  } catch (err) {
+    console.error("❌ Error en discover:", err);
+    res.status(500).json({ message: "Error buscando usuarios" });
+  }
+};
+

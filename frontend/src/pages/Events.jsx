@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
-import { API_URL } from "../config/api";
+import api from "../api/axios";     // <-- usa api, NO axios
 import toast from "react-hot-toast";
+import { API_URL } from "../config/api";
 
 export default function Events() {
   const token = localStorage.getItem("token");
@@ -17,41 +17,37 @@ export default function Events() {
   });
   const [editingId, setEditingId] = useState(null);
 
+  // cargar eventos
   const load = async () => {
-    const res = await axios.get(`${API_URL}/events`);
-    setEvents(res.data);
+    try {
+      const res = await api.get("/events");
+      setEvents(res.data);
+    } catch (e) {
+      console.log("Error cargando eventos", e);
+    }
   };
 
   useEffect(() => {
     load();
   }, []);
 
+  // guardar o actualizar
   const save = async (e) => {
     e.preventDefault();
 
-    if (!token) return toast.error("Inicia sesión primero");
-
     try {
       if (editingId) {
-        await axios.put(
-          `${API_URL}/events/update`,
-          { id: editingId, ...form },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        await api.put(`/events/update/${editingId}`, form);
         toast.success("Evento actualizado");
       } else {
-        await axios.post(
-          `${API_URL}/events/create`,
-          form,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        await api.post("/events/create", form);
         toast.success("Evento creado");
       }
 
       setForm({ titulo: "", descripcion: "", fecha: "", imagen: "", map_url: "" });
       setEditingId(null);
       load();
-    } catch (e) {
+    } catch (err) {
       toast.error("Error guardando evento");
     }
   };
@@ -61,7 +57,7 @@ export default function Events() {
     setForm({
       titulo: ev.titulo,
       descripcion: ev.descripcion,
-      fecha: ev.fecha,
+      fecha: ev.fecha?.split("T")[0] || "",
       imagen: ev.imagen,
       map_url: ev.map_url
     });
@@ -71,10 +67,7 @@ export default function Events() {
     if (!window.confirm("¿Eliminar evento?")) return;
 
     try {
-      await axios.delete(`${API_URL}/events/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
+      await api.delete(`/events/${id}`);
       toast.success("Evento eliminado");
       load();
     } catch {
@@ -83,20 +76,16 @@ export default function Events() {
   };
 
   const join = async (id) => {
-    if (!token) return toast.error("Inicia sesión");
-
-    await axios.post(
-      `${API_URL}/events/${id}/join`,
-      {},
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-
-    toast.success("Te uniste al evento");
+    try {
+      await api.post(`/events/${id}/join`);
+      toast.success("Te uniste al evento");
+    } catch {
+      toast.error("Error al unirte");
+    }
   };
 
   return (
     <div className="p-4">
-
       {/* FORM */}
       <form
         onSubmit={save}
@@ -136,7 +125,7 @@ export default function Events() {
 
         <input
           className="p-2 border rounded w-full mb-2"
-          placeholder="Link de Google Maps (opcional)"
+          placeholder="Link de Google Maps"
           value={form.map_url}
           onChange={(e) => setForm({ ...form, map_url: e.target.value })}
         />
@@ -146,7 +135,7 @@ export default function Events() {
         </button>
       </form>
 
-      {/* LIST */}
+      {/* LISTA */}
       <div className="mt-6 space-y-3">
         {events.map((ev) => (
           <div
@@ -172,7 +161,7 @@ export default function Events() {
                 target="_blank"
                 className="block mt-2 text-blue-600 underline"
               >
-                📍 Ver ubicación en Google Maps
+                📍 Ver ubicación
               </a>
             )}
 
@@ -184,7 +173,7 @@ export default function Events() {
                 Unirme
               </button>
 
-              {me.id === ev.creator_id && (
+              {me.id === ev.creador_id && (
                 <>
                   <button
                     onClick={() => handleEdit(ev)}

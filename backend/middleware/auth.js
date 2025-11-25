@@ -1,22 +1,30 @@
-// backend/middleware/auth.js
 import jwt from "jsonwebtoken";
+import { getDB } from "../config/db.js";
 
-export function protect(req, res, next) {
-  const header = req.headers.authorization;
+export const protect = async (req, res, next) => {
+  let token;
 
-  if (!header) {
-    return res.status(401).json({ error: "No autorizado. Falta token." });
+  if (req.headers.authorization?.startsWith("Bearer")) {
+    token = req.headers.authorization.split(" ")[1];
   }
 
-  const token = header.split(" ")[1];
+  if (!token) {
+    return res.status(401).json({ message: "Token faltante o inválido" });
+  }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const db = await getDB();
+    const [rows] = await db.query("SELECT * FROM users WHERE id = ?", [decoded.id]);
 
-    req.user = decoded; // contiene id y email
+    if (rows.length === 0) {
+      return res.status(401).json({ message: "Token no válido" });
+    }
+
+    req.user = rows[0];
     next();
-  } catch (e) {
-    console.error(e);
-    res.status(401).json({ error: "Token inválido o expirado." });
+  } catch (err) {
+    console.error("Token error:", err);
+    res.status(401).json({ message: "Token expirado o inválido" });
   }
-}
+};

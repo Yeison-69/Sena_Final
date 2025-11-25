@@ -5,10 +5,10 @@ import connectDB from "./config/db.js";
 
 import userRoutes from "./routes/userRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
-import eventRoutes from "./routes/eventRoutes.js";
-import chatRoutes from "./routes/chatRoutes.js";
 import matchRoutes from "./routes/matchRoutes.js";
 import notifRoutes from "./routes/notifRoutes.js";
+import chatRoutes from "./routes/chatRoutes.js";
+import eventRoutes from "./routes/eventRoutes.js";
 
 dotenv.config();
 
@@ -16,15 +16,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// conectar DB
 await connectDB();
 
-app.use("/api/users", userRoutes);   // 🔥 PERFIL
-app.use("/api/auth", authRoutes);    // 🔥 LOGIN/REGISTER
-app.use("/api/events", eventRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/matches", matchRoutes);
+app.use("/api/notifications", notifRoutes);
 app.use("/api/chats", chatRoutes);
-app.use("/api/match", matchRoutes);
-app.use("/api/notificaciones", notifRoutes);
+app.use("/api/events", eventRoutes);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`🔥 Servidor en puerto ${PORT}`));

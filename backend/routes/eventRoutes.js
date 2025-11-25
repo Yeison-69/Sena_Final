@@ -2,7 +2,7 @@ import express from "express";
 import { protect } from "../middleware/auth.js";
 import {
   createEvent,
-  getEvents,
+  listEvents,
   updateEvent,
   deleteEvent,
   joinEvent
@@ -10,10 +10,19 @@ import {
 
 const router = express.Router();
 
-router.get("/", getEvents);
+// listar
+router.get("/", protect, listEvents);
+
+// crear
 router.post("/create", protect, createEvent);
-router.put("/update", protect, updateEvent);
+
+// actualizar
+router.put("/update/:id", protect, updateEvent);
+
+// eliminar
 router.delete("/:id", protect, deleteEvent);
-router.post("/:id/join", protect, joinEvent);
+
+// unirse
+router.post("/:eventId/join", protect, joinEvent);
 
 export default router;

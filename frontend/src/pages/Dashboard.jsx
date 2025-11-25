@@ -1,50 +1,104 @@
-import React, { useEffect, useState } from "react";
-import TinderCard from "react-tinder-card";
-import axios from "axios";
-import { API_URL } from "../config/api";
+import { useEffect, useState } from "react";
+import api from "../api/axios";
+import ParcheCard from "../components/ParcheCard";
 
 export default function Dashboard() {
-  const token = localStorage.getItem("token");
   const [users, setUsers] = useState([]);
+  const [index, setIndex] = useState(0);
 
-  useEffect(()=> {
-    if (!token) return;
-    axios.get(`${API_URL}/user/discover`, { headers: { Authorization: `Bearer ${token}` }})
-      .then(res => setUsers(res.data))
-      .catch(()=>{});
-  }, []);
-
-  const onSwipe = async (direction, id) => {
-    if (!token) return alert("Inicia sesión");
+  const loadUsers = async () => {
     try {
-      if (direction === "right") {
-        await axios.post(`${API_URL}/match/like`, { likedId: id }, { headers: { Authorization: `Bearer ${token}` }});
-      } else {
-        // dislike (no endpoint required here)
-      }
-      setUsers(prev => prev.filter(u => u.id !== id));
-    } catch (err) {
-      console.error(err);
+      const res = await api.get("/users/discover");
+      setUsers(res.data);
+      setIndex(0);
+    } catch (error) {
+      console.log("Error:", error);
     }
   };
 
-  return (
-    <div style={{ padding: 20 }}>
-      <h2 style={{ textAlign: "center" }}>Buscar pareja</h2>
+  useEffect(() => {
+    loadUsers();
+  }, []);
 
-      <div style={{ display: "flex", justifyContent: "center", paddingTop: 20 }}>
-        {users.length === 0 && <div>No hay usuarios</div>}
-        <div style={{ width: 300 }}>
-          {users.map(u => (
-            <TinderCard key={u.id} onSwipe={(dir)=>onSwipe(dir,u.id)}>
-              <div style={{ background: "white", padding: 10, borderRadius: 8, marginBottom: 12 }}>
-                <img src={u.foto || "/images/user-default.png"} alt="" style={{ width: "100%", height: 380, objectFit: "cover", borderRadius: 8 }} />
-                <h3>{u.nombre}</h3>
-                <p style={{ color: "#666" }}>{u.descripcion}</p>
-              </div>
-            </TinderCard>
-          ))}
-        </div>
+  const likeUser = async () => {
+    if (!users[index]) return;
+
+    await api.post("/matches/like", { targetId: users[index].id });
+
+    nextUser();
+  };
+
+  const skipUser = () => {
+    nextUser();
+  };
+
+  const nextUser = () => {
+    if (index + 1 < users.length) setIndex(index + 1);
+    else alert("No hay más usuarios por hoy");
+  };
+
+  if (!users[index]) {
+    return <h2 style={{ textAlign: "center", marginTop: 40 }}>Cargando...</h2>;
+  }
+
+  const u = users[index];
+
+  return (
+    <div style={{
+      padding: 20,
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center"
+    }}>
+      
+      <h2>Personas cercanas</h2>
+
+      <ParcheCard user={u} />
+
+      {/* 🔥 BOTONES GRANDES Y VISIBLES */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          gap: 25,
+          marginTop: 25
+        }}
+      >
+        {/* ❌ Dislike */}
+        <button
+          onClick={skipUser}
+          style={{
+            width: 80,
+            height: 80,
+            borderRadius: "50%",
+            border: "none",
+            background: "#ff4d4d",
+            color: "white",
+            fontSize: 30,
+            cursor: "pointer",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.3)"
+          }}
+        >
+          ✖
+        </button>
+
+        {/* ❤️ Like */}
+        <button
+          onClick={likeUser}
+          style={{
+            width: 80,
+            height: 80,
+            borderRadius: "50%",
+            border: "none",
+            background: "#4ade80",
+            color: "white",
+            fontSize: 30,
+            cursor: "pointer",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.3)"
+          }}
+        >
+          ❤️
+        </button>
       </div>
     </div>
   );
